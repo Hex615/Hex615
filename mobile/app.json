@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "LMK",
-    "slug": "lmk-app",
+    "name": "Chatsplat",
+    "slug": "chatsplat",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -9,21 +9,21 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4FC3F7"
+      "backgroundColor": "#0A0A0A"
     },
     "updates": { "fallbackToCacheTimeout": 0 },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.lmk.app",
+      "bundleIdentifier": "com.chatsplat.app",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "LMK needs access to your photos to set your profile picture.",
-        "NSCameraUsageDescription": "LMK needs camera access to take a profile photo.",
-        "NSMicrophoneUsageDescription": "LMK needs microphone access for live audio rooms."
+        "NSPhotoLibraryUsageDescription": "Chatsplat needs access to your photos to set your profile picture.",
+        "NSCameraUsageDescription": "Chatsplat needs camera access to take a profile photo.",
+        "NSMicrophoneUsageDescription": "Chatsplat needs microphone access for live audio rooms."
       }
     },
     "android": {
-      "package": "com.lmk.app",
+      "package": "com.Chatsplat.app",
       "versionCode": 1,
       "permissions": [
         "READ_EXTERNAL_STORAGE",
@@ -34,8 +34,8 @@
     },
     "plugins": [
       ["expo-image-picker", {
-        "photosPermission": "LMK needs access to your photos to set your profile picture.",
-        "cameraPermission": "LMK needs camera access to take a profile photo."
+        "photosPermission": "Chatsplat needs access to your photos to set your profile picture.",
+        "cameraPermission": "Chatsplat needs camera access to take a profile photo."
       }],
       "expo-notifications"
     ]
