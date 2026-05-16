@@ -38,6 +38,6 @@
     "@expo/vector-icons": "13.0.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0"
+    "@babel/core": "7.20.0"
   }
 }
