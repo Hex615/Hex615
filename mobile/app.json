@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "LMK",
+    "slug": "lmk-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4FC3F7"
+    },
+    "updates": { "fallbackToCacheTimeout": 0 },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.lmk.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "LMK needs access to your photos to set your profile picture.",
+        "NSCameraUsageDescription": "LMK needs camera access to take a profile photo.",
+        "NSMicrophoneUsageDescription": "LMK needs microphone access for live audio rooms."
+      }
+    },
+    "android": {
+      "package": "com.lmk.app",
+      "versionCode": 1,
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "CAMERA",
+        "RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      ["expo-image-picker", {
+        "photosPermission": "LMK needs access to your photos to set your profile picture.",
+        "cameraPermission": "LMK needs camera access to take a profile photo."
+      }],
+      "expo-notifications"
+    ]
+  }
+}
