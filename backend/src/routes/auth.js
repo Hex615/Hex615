@@ -6,6 +6,7 @@ const { validate }  = require('../middleware/validate');
 const { hashToken, genToken } = require('../utils/crypto');
 const { awardVoltage } = require('../utils/voltage');
 const limits = require('../middleware/rateLimiter');
+const { recordFailedAttempt, getClientIp } = require('../middleware/ipBan');
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function generateOTP() {
@@ -60,22 +61,30 @@ router.post('/verify-otp',
   async (req, res) => {
     const phone = normalizePhone(req.body.phone);
     const { code } = req.body;
+    const ip = req.clientIp || getClientIp(req);
     try {
       // Find valid OTP
       const otp = await db.query(
         "SELECT * FROM otp_codes WHERE phone=$1 AND used=false AND expires_at>NOW() ORDER BY created_at DESC LIMIT 1",
         [phone]
       );
-      if (!otp.rows[0]) return res.status(400).json({ error: 'No active OTP found' });
+      if (!otp.rows[0]) {
+        await recordFailedAttempt(ip, 'otp_verify', db);
+        return res.status(400).json({ error: 'No active OTP found' });
+      }
 
       // Increment attempts — lock after 5
       await db.query('UPDATE otp_codes SET attempts=attempts+1 WHERE id=$1', [otp.rows[0].id]);
       if (otp.rows[0].attempts >= 5) {
         await db.query('UPDATE otp_codes SET used=true WHERE id=$1', [otp.rows[0].id]);
+        await recordFailedAttempt(ip, 'otp_verify', db);
         return res.status(400).json({ error: 'Too many attempts. Request a new code.' });
       }
 
-      if (otp.rows[0].code !== code) return res.status(400).json({ error: 'Invalid code' });
+      if (otp.rows[0].code !== code) {
+        await recordFailedAttempt(ip, 'otp_verify', db);
+        return res.status(400).json({ error: 'Invalid code' });
+      }
       await db.query('UPDATE otp_codes SET used=true WHERE id=$1', [otp.rows[0].id]);
 
       // Upsert user
@@ -97,6 +106,14 @@ router.post('/verify-otp',
         "INSERT INTO refresh_tokens (user_id,token_hash,expires_at) VALUES ($1,$2,NOW()+INTERVAL '30 days')",
         [user.id, hash]
       );
+
+      // Track session for device management
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      await db.query(
+        `INSERT INTO user_sessions (user_id, ip_address, device_info, refresh_token_hash, expires_at)
+         VALUES ($1, $2::inet, $3, $4, NOW()+INTERVAL '30 days')`,
+        [user.id, ip, userAgent.substring(0, 255), hash]
+      ).catch(() => {}); // non-fatal
 
       const { phone: _p, ...safeUser } = user;
       res.json({ accessToken, refreshToken, user: safeUser, isNew });
@@ -132,6 +149,15 @@ router.post('/refresh',
         [stored.rows[0].user_id, newHash]
       );
 
+      // Keep user_sessions in sync with rotated token
+      const ip = req.clientIp || getClientIp(req);
+      const ua = (req.headers['user-agent'] || 'unknown').substring(0, 255);
+      await db.query(
+        `UPDATE user_sessions SET refresh_token_hash=$1, ip_address=$2::inet, device_info=$3, last_active=NOW(), expires_at=NOW()+INTERVAL '30 days'
+         WHERE refresh_token_hash=$4`,
+        [newHash, ip, ua, hash]
+      ).catch(() => {});
+
       res.json({ accessToken, refreshToken: newRaw });
     } catch (err) {
       console.error(err);
@@ -146,6 +172,7 @@ router.post('/logout', async (req, res) => {
   if (refreshToken) {
     const hash = hashToken(refreshToken);
     await db.query('DELETE FROM refresh_tokens WHERE token_hash=$1', [hash]).catch(() => {});
+    await db.query('DELETE FROM user_sessions WHERE refresh_token_hash=$1', [hash]).catch(() => {});
   }
   res.json({ message: 'Logged out' });
 });

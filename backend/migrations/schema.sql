@@ -344,3 +344,64 @@ CREATE TABLE reports (
   status           VARCHAR(20) NOT NULL DEFAULT 'pending',
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ──────────────────────────────────────────────
+-- IP Bans
+-- ──────────────────────────────────────────────
+CREATE TABLE ip_bans (
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ip_address   INET        NOT NULL UNIQUE,
+  reason       TEXT,
+  banned_by    UUID        REFERENCES users(id) ON DELETE SET NULL,
+  is_permanent BOOLEAN     NOT NULL DEFAULT false,
+  expires_at   TIMESTAMPTZ,           -- NULL = permanent
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_ip_bans_ip ON ip_bans (ip_address);
+
+-- ──────────────────────────────────────────────
+-- User Sessions (per-device tracking)
+-- ──────────────────────────────────────────────
+CREATE TABLE user_sessions (
+  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id             UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  refresh_token_hash  VARCHAR(64) UNIQUE NOT NULL,
+  ip_address          INET,
+  device_info         TEXT,
+  last_active         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at          TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '30 days',
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_sessions_user   ON user_sessions (user_id, expires_at);
+CREATE INDEX idx_sessions_token  ON user_sessions (refresh_token_hash);
+
+-- ──────────────────────────────────────────────
+-- Security Events (audit log)
+-- ──────────────────────────────────────────────
+CREATE TABLE security_events (
+  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id    UUID        REFERENCES users(id) ON DELETE SET NULL,
+  ip_address INET,
+  event_type VARCHAR(60) NOT NULL,
+  details    JSONB,
+  severity   VARCHAR(10) NOT NULL DEFAULT 'info'
+               CHECK (severity IN ('info','warn','critical')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_sec_events_user     ON security_events (user_id, created_at DESC);
+CREATE INDEX idx_sec_events_ip       ON security_events (ip_address, created_at DESC);
+CREATE INDEX idx_sec_events_severity ON security_events (severity, created_at DESC);
+
+-- ──────────────────────────────────────────────
+-- Failed Auth Attempts (used for auto-IP-ban)
+-- ──────────────────────────────────────────────
+CREATE TABLE failed_auth_attempts (
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ip_address   INET        NOT NULL,
+  attempt_type VARCHAR(30) NOT NULL,  -- 'otp_verify','token_refresh','login'
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_fail_auth_ip   ON failed_auth_attempts (ip_address, created_at DESC);
+
+-- Admin flag on users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;

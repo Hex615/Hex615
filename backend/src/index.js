@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const cors    = require('cors');
 const helmet  = require('helmet');
 const limits  = require('./middleware/rateLimiter');
+const ipBan   = require('./middleware/ipBan');
 
 // ── Boot check ─────────────────────────────────────────────────────────────
 const required = ['DATABASE_URL','JWT_SECRET','JWT_REFRESH_SECRET'];
@@ -22,6 +23,9 @@ const io     = new Server(server, {
   pingTimeout: 30000,
   pingInterval: 10000,
 });
+
+// ── IP ban check — must be first ──────────────────────────────────────────
+app.use(ipBan.ipBanMiddleware);
 
 // ── Security middleware ────────────────────────────────────────────────────
 app.use(helmet({
@@ -53,6 +57,7 @@ app.use('/swipe',         require('./routes/swipe'));
 app.use('/feed',          require('./routes/feed'));
 app.use('/voltage',       require('./routes/voltage'));
 app.use('/notifications', require('./routes/notifications'));
+app.use('/admin',         require('./routes/admin'));
 
 // ── Health check ──────────────────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ status: 'ok', app: 'Chatsplat', ts: new Date() }));

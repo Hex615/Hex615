@@ -4,6 +4,7 @@ const db   = require('../config/database');
 const auth = require('../middleware/auth');
 const { validate, uuidParam } = require('../middleware/validate');
 const { awardVoltage } = require('../utils/voltage');
+const { hashToken } = require('../utils/crypto');
 
 router.get('/me', auth, async (req, res) => {
   try {
@@ -101,5 +102,55 @@ router.post('/:id/report', auth, uuidParam('id'), validate,
     } catch { res.status(500).json({ error: 'Server error' }); }
   }
 );
+
+// ── Session management ────────────────────────────────────────────────────────
+router.get('/me/sessions', auth, async (req, res) => {
+  try {
+    const sessions = await db.query(
+      `SELECT id, ip_address, device_info, last_active, created_at, expires_at
+       FROM user_sessions
+       WHERE user_id=$1 AND expires_at > NOW()
+       ORDER BY last_active DESC`,
+      [req.user.userId]
+    );
+    res.json(sessions.rows);
+  } catch { res.status(500).json({ error: 'Server error' }); }
+});
+
+router.delete('/me/sessions/:id', auth, uuidParam('id'), validate, async (req, res) => {
+  try {
+    const session = await db.query(
+      'SELECT refresh_token_hash FROM user_sessions WHERE id=$1 AND user_id=$2',
+      [req.params.id, req.user.userId]
+    );
+    if (!session.rows[0]) return res.status(404).json({ error: 'Session not found' });
+
+    const hash = session.rows[0].refresh_token_hash;
+    await db.query('DELETE FROM user_sessions WHERE id=$1', [req.params.id]);
+    await db.query('DELETE FROM refresh_tokens WHERE token_hash=$1', [hash]).catch(() => {});
+    res.json({ revoked: true });
+  } catch { res.status(500).json({ error: 'Server error' }); }
+});
+
+router.delete('/me/sessions', auth, async (req, res) => {
+  const { keepCurrent } = req.query;
+  const currentHash = req.body.refreshToken ? hashToken(req.body.refreshToken) : null;
+  try {
+    if (keepCurrent && currentHash) {
+      await db.query(
+        'DELETE FROM user_sessions WHERE user_id=$1 AND refresh_token_hash!=$2',
+        [req.user.userId, currentHash]
+      );
+      await db.query(
+        'DELETE FROM refresh_tokens WHERE user_id=$1 AND token_hash!=$2',
+        [req.user.userId, currentHash]
+      );
+    } else {
+      await db.query('DELETE FROM user_sessions WHERE user_id=$1', [req.user.userId]);
+      await db.query('DELETE FROM refresh_tokens WHERE user_id=$1', [req.user.userId]);
+    }
+    res.json({ revoked: true });
+  } catch { res.status(500).json({ error: 'Server error' }); }
+});
 
 module.exports = router;
