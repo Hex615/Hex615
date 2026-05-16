@@ -37,7 +37,8 @@
         "photosPermission": "Chatsplat needs access to your photos to set your profile picture.",
         "cameraPermission": "Chatsplat needs camera access to take a profile photo."
       }],
-      "expo-notifications"
+      "expo-notifications",
+      "react-native-keyboard-controller"
     ]
   }
 }
