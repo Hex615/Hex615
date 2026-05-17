@@ -4,7 +4,7 @@
     "slug": "chatsplat",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "updates": { "fallbackToCacheTimeout": 0 },
     "assetBundlePatterns": ["**/*"],
     "ios": {
@@ -17,14 +17,14 @@
       }
     },
     "android": {
-      "package": "com.Chatsplat.app",
+      "package": "com.chatsplat.app",
       "versionCode": 1,
       "permissions": [
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "CAMERA",
         "RECORD_AUDIO"
-        ],
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A0A0A"
@@ -39,7 +39,6 @@
         "cameraPermission": "Chatsplat needs camera access to take a profile photo."
       }],
       "expo-notifications"
-     
     ]
   }
 }
