@@ -1,5 +1,5 @@
 {
-  "name": "lmk-mobile",
+  "name": "chatsplat",
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
@@ -43,11 +43,15 @@
   },
   "expo": {
     "install": {
-      "exclude": ["expo-av"]
+      "exclude": [
+        "expo-av"
+      ]
     },
     "doctor": {
       "reactNativeDirectoryCheck": {
-        "exclude": ["react-native-vector-icons"]
+        "exclude": [
+          "react-native-vector-icons"
+        ]
       }
     }
   }

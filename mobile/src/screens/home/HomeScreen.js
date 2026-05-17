@@ -1,26 +1,29 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../services/api';
 import RoomCard from '../../components/RoomCard';
+import { C } from '../../theme';
 
-const TABS = ['All', 'Following', 'Music', 'Discussion', 'Gaming', 'Tech'];
+const TABS = ['All', 'Following', 'Audio', 'Video', 'Music', 'Gaming', 'Tech'];
 
 export default function HomeScreen({ navigation }) {
-  const [rooms, setRooms] = useState([]);
-  const [tab, setTab] = useState('All');
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [rooms, setRooms]       = useState([]);
+  const [tab, setTab]           = useState('All');
+  const [search, setSearch]     = useState('');
+  const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchRooms = async () => {
     try {
       const params = {};
       if (tab === 'Following') params.tab = 'following';
+      else if (['Audio', 'Video'].includes(tab)) params.mode = tab.toLowerCase();
       else if (tab !== 'All') params.category = tab;
       const res = await api.get('/rooms', { params });
       setRooms(res.data);
@@ -32,101 +35,107 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  useFocusEffect(useCallback(() => { fetchRooms(); }, [tab]));
+  useFocusEffect(useCallback(() => { setLoading(true); fetchRooms(); }, [tab]));
 
   const filtered = rooms.filter((r) =>
     !search || r.title.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={s.container} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.logo}>LMK</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
-            <Ionicons name="notifications-outline" size={24} color="#222" />
-          </TouchableOpacity>
-        </View>
+      <View style={s.header}>
+        <Text style={s.logo}>Chatsplat</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+          <Ionicons name="notifications-outline" size={24} color={C.white} />
+        </TouchableOpacity>
       </View>
 
       {/* Search */}
-      <View style={styles.searchWrap}>
-        <Ionicons name="search" size={16} color="#aaa" style={styles.searchIcon} />
+      <View style={s.searchWrap}>
+        <Ionicons name="search" size={15} color={C.sub} style={{ marginRight: 8 }} />
         <TextInput
-          style={styles.searchInput}
-          placeholder="Search rooms..."
+          style={s.searchInput}
+          placeholder="Search Splat Rooms..."
+          placeholderTextColor={C.sub}
           value={search}
           onChangeText={setSearch}
-          placeholderTextColor="#aaa"
         />
       </View>
 
-      {/* Tab Bar */}
+      {/* Category tabs */}
       <FlatList
         horizontal
         data={TABS}
         keyExtractor={(t) => t}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabs}
+        contentContainerStyle={s.tabs}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={[styles.tab, tab === item && styles.tabActive]}
+            style={[s.tab, tab === item && s.tabActive]}
             onPress={() => setTab(item)}
           >
-            <Text style={[styles.tabText, tab === item && styles.tabTextActive]}>{item}</Text>
+            <Text style={[s.tabText, tab === item && s.tabTextActive]}>{item}</Text>
           </TouchableOpacity>
         )}
       />
 
-      {/* Rooms List */}
+      {/* Rooms */}
       {loading ? (
-        <ActivityIndicator style={styles.loader} color="#4FC3F7" size="large" />
+        <ActivityIndicator style={{ flex: 1, marginTop: 60 }} color={C.purple} size="large" />
       ) : (
         <FlatList
           data={filtered}
           keyExtractor={(r) => r.id}
-          contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchRooms(); }} />}
+          contentContainerStyle={s.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => { setRefreshing(true); fetchRooms(); }}
+              tintColor={C.purple}
+            />
+          }
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>🎙️</Text>
-              <Text style={styles.emptyText}>No live rooms right now</Text>
-              <Text style={styles.emptySub}>Be the first to start one!</Text>
+            <View style={s.empty}>
+              <Text style={s.emptyEmoji}>⚡</Text>
+              <Text style={s.emptyTitle}>No live Splat Rooms</Text>
+              <Text style={s.emptySub}>Be the first to start one!</Text>
             </View>
           }
           renderItem={({ item }) => (
-            <RoomCard room={item} onPress={() => navigation.navigate('AudioRoom', { room: item })} />
+            <RoomCard room={item} onPress={() => navigation.navigate('SplatRoom', { room: item })} />
           )}
         />
       )}
 
-      {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateRoom')}>
-        <Ionicons name="add" size={28} color="#fff" />
+      {/* Create room FAB */}
+      <TouchableOpacity style={s.fab} onPress={() => navigation.navigate('CreateRoom')}>
+        <Ionicons name="add" size={28} color="#000" />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f7fa' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12, backgroundColor: '#fff' },
-  logo: { fontSize: 26, fontWeight: '900', color: '#4FC3F7', letterSpacing: -1 },
-  headerRight: { flexDirection: 'row', gap: 16 },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginVertical: 10, borderRadius: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: '#eee' },
-  searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 10, color: '#222' },
-  tabs: { paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
-  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#f0f0f0' },
-  tabActive: { backgroundColor: '#4FC3F7' },
-  tabText: { fontSize: 13, color: '#666', fontWeight: '600' },
-  tabTextActive: { color: '#fff' },
-  list: { padding: 16 },
-  loader: { flex: 1, marginTop: 60 },
-  empty: { alignItems: 'center', paddingTop: 80 },
-  emptyEmoji: { fontSize: 56, marginBottom: 12 },
-  emptyText: { fontSize: 18, fontWeight: '700', color: '#333' },
-  emptySub: { fontSize: 14, color: '#aaa', marginTop: 4 },
-  fab: { position: 'absolute', bottom: 32, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#4FC3F7', justifyContent: 'center', alignItems: 'center', elevation: 6, shadowColor: '#4FC3F7', shadowOpacity: 0.4, shadowRadius: 10 },
+const s = StyleSheet.create({
+  container:    { flex: 1, backgroundColor: C.bg },
+  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
+  logo:         { fontSize: 24, fontWeight: '900', color: C.purple, letterSpacing: -0.5 },
+  searchWrap:   { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface, marginHorizontal: 16, marginBottom: 10, borderRadius: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: C.border },
+  searchInput:  { flex: 1, fontSize: 14, paddingVertical: 11, color: C.white },
+  tabs:         { paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
+  tab:          { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
+  tabActive:    { backgroundColor: C.purple, borderColor: C.purple },
+  tabText:      { fontSize: 13, color: C.sub, fontWeight: '600' },
+  tabTextActive:{ color: '#fff' },
+  list:         { padding: 16 },
+  empty:        { alignItems: 'center', paddingTop: 80 },
+  emptyEmoji:   { fontSize: 52, marginBottom: 12 },
+  emptyTitle:   { fontSize: 18, fontWeight: '700', color: C.white },
+  emptySub:     { fontSize: 14, color: C.sub, marginTop: 6 },
+  fab: {
+    position: 'absolute', bottom: 28, right: 20,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: C.yellow, justifyContent: 'center', alignItems: 'center',
+    elevation: 8, shadowColor: C.yellow, shadowOpacity: 0.5, shadowRadius: 12,
+  },
 });
