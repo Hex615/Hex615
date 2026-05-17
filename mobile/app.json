@@ -24,15 +24,22 @@
         "WRITE_EXTERNAL_STORAGE",
         "CAMERA",
         "RECORD_AUDIO"
-      ]
+        ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0A0A"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       ["expo-image-picker", {
         "photosPermission": "Chatsplat needs access to your photos to set your profile picture.",
         "cameraPermission": "Chatsplat needs camera access to take a profile photo."
       }],
-      "expo-notifications",
-      "react-native-keyboard-controller"
+      "expo-notifications"
+      
     ]
   }
 }
