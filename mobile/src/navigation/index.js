@@ -16,8 +16,10 @@ import SwipeScreen      from '../screens/swipe/SwipeScreen';
 import FeedScreen       from '../screens/feed/FeedScreen';
 import ChatListScreen   from '../screens/chat/ChatListScreen';
 import ChatScreen       from '../screens/chat/ChatScreen';
-import ProfileScreen    from '../screens/profile/ProfileScreen';
-import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import ProfileScreen      from '../screens/profile/ProfileScreen';
+import EditProfileScreen  from '../screens/profile/EditProfileScreen';
+import CreateRoomScreen   from '../screens/room/CreateRoomScreen';
+import BuySpoTaScreen     from '../screens/spota/BuySpoTaScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab   = createBottomTabNavigator();
@@ -85,9 +87,11 @@ function AppStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main"        component={HomeTabs} />
-      <Stack.Screen name="SplatRoom"   component={SplatRoomScreen} options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="SplatRoom"   component={SplatRoomScreen}  options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="CreateRoom"  component={CreateRoomScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="ChatRoom"    component={ChatScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="BuySpota"    component={BuySpoTaScreen} />
     </Stack.Navigator>
   );
 }

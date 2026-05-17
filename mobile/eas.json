@@ -17,13 +17,15 @@
       "android": { "buildType": "apk" },
       "ios": { "simulator": false },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.chatsplat.app"
+        "EXPO_PUBLIC_API_URL": "https://api.chatsplat.app",
+        "EXPO_PUBLIC_AGORA_APP_ID": "YOUR_AGORA_APP_ID"
       }
     },
     "production": {
       "android": { "buildType": "app-bundle" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.chatsplat.app"
+        "EXPO_PUBLIC_API_URL": "https://api.chatsplat.app",
+        "EXPO_PUBLIC_AGORA_APP_ID": "YOUR_AGORA_APP_ID"
       }
     }
   },

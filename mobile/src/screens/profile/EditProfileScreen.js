@@ -8,26 +8,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import AvatarPicker from '../../components/AvatarPicker';
+import { C } from '../../theme';
 
 const INTERESTS = [
-  'Music', 'Gaming', 'Sports', 'Art', 'Tech', 'Fashion',
-  'Food', 'Travel', 'Fitness', 'Movies', 'Books', 'Comedy',
-  'Politics', 'Anime', 'Dance', 'Spirituality',
+  'Music','Gaming','Sports','Art','Tech','Fashion',
+  'Food','Travel','Fitness','Movies','Books','Comedy',
+  'Politics','Anime','Dance','Spirituality',
 ];
 
 export default function EditProfileScreen({ navigation }) {
   const { user, updateUser } = useAuthStore();
-  const [username, setUsername] = useState(user?.username || '');
-  const [bio, setBio] = useState(user?.bio || '');
-  const [age, setAge] = useState(user?.age ? String(user.age) : '');
+  const [username,  setUsername]  = useState(user?.username || '');
+  const [bio,       setBio]       = useState(user?.bio || '');
+  const [age,       setAge]       = useState(user?.age ? String(user.age) : '');
   const [interests, setInterests] = useState(user?.interests || []);
   const [avatarUri, setAvatarUri] = useState(user?.avatar_url || null);
-  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [loading,   setLoading]   = useState(false);
 
   const toggleInterest = (tag) =>
     setInterests((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : prev.length < 8 ? [...prev, tag] : prev
+      prev.includes(tag) ? prev.filter((t) => t !== tag)
+        : prev.length < 8 ? [...prev, tag] : prev
     );
 
   const handleSave = async () => {
@@ -36,7 +38,7 @@ export default function EditProfileScreen({ navigation }) {
     try {
       const res = await api.put('/users/me', {
         username: username.trim().toLowerCase(),
-        bio: bio.trim(),
+        bio: bio.trim() || null,
         age: age ? parseInt(age) : null,
         interests,
         avatar_url: avatarUri,
@@ -51,74 +53,91 @@ export default function EditProfileScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
+    <SafeAreaView style={s.container} edges={['top']}>
+      <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#222" />
+          <Ionicons name="arrow-back" size={24} color={C.white} />
         </TouchableOpacity>
-        <Text style={styles.title}>Edit Profile</Text>
+        <Text style={s.title}>Edit Profile</Text>
         <TouchableOpacity onPress={handleSave} disabled={loading}>
           {loading
-            ? <ActivityIndicator color="#4FC3F7" />
-            : <Text style={styles.saveBtn}>Save</Text>}
+            ? <ActivityIndicator color={C.yellow} size="small" />
+            : <Text style={s.saveBtn}>Save</Text>
+          }
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Avatar Picker */}
-        <TouchableOpacity style={styles.avatarSection} onPress={() => setAvatarPickerOpen(true)}>
-          {avatarUri ? (
-            <Image source={{ uri: avatarUri }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Text style={styles.avatarLetter}>{(username || '?')[0].toUpperCase()}</Text>
-            </View>
-          )}
-          <View style={styles.changePhotoRow}>
-            <Ionicons name="camera" size={16} color="#4FC3F7" />
-            <Text style={styles.changePhotoText}>Change photo</Text>
+      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        {/* Avatar */}
+        <TouchableOpacity style={s.avatarSection} onPress={() => setPickerOpen(true)}>
+          {avatarUri
+            ? <Image source={{ uri: avatarUri }} style={s.avatar} />
+            : <View style={[s.avatar, s.avatarFb]}>
+                <Text style={s.avatarLetter}>{(username || '?')[0].toUpperCase()}</Text>
+              </View>
+          }
+          <View style={s.changeRow}>
+            <Ionicons name="camera" size={15} color={C.purple} />
+            <Text style={s.changeText}>Change photo</Text>
           </View>
-          <Text style={styles.changePhotoHint}>Pick from device or choose an aesthetic pic</Text>
         </TouchableOpacity>
 
-        {/* Fields */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Username</Text>
-          <View style={styles.inputRow}>
-            <Text style={styles.atSign}>@</Text>
-            <TextInput style={styles.input} value={username} onChangeText={setUsername} autoCapitalize="none" maxLength={30} />
+        {/* Username */}
+        <View style={s.field}>
+          <Text style={s.label}>USERNAME</Text>
+          <View style={s.inputRow}>
+            <Text style={s.at}>@</Text>
+            <TextInput
+              style={s.input}
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              maxLength={30}
+              placeholderTextColor={C.sub}
+            />
           </View>
         </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Bio</Text>
+        {/* Bio */}
+        <View style={s.field}>
+          <Text style={s.label}>BIO</Text>
           <TextInput
-            style={[styles.input, styles.bioInput]}
+            style={[s.input, s.bioInput]}
             value={bio}
             onChangeText={setBio}
             multiline
             maxLength={160}
             placeholder="Tell people who you are..."
+            placeholderTextColor={C.sub}
           />
-          <Text style={styles.charCount}>{bio.length}/160</Text>
+          <Text style={s.charCount}>{bio.length}/160</Text>
         </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Age</Text>
-          <TextInput style={styles.input} value={age} onChangeText={setAge} keyboardType="number-pad" maxLength={2} placeholder="18" />
+        {/* Age */}
+        <View style={s.field}>
+          <Text style={s.label}>AGE</Text>
+          <TextInput
+            style={s.input}
+            value={age}
+            onChangeText={setAge}
+            keyboardType="number-pad"
+            maxLength={2}
+            placeholder="18"
+            placeholderTextColor={C.sub}
+          />
         </View>
 
         {/* Interests */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Interests (up to 8)</Text>
-          <View style={styles.tagsGrid}>
+        <View style={s.field}>
+          <Text style={s.label}>INTERESTS  {interests.length}/8</Text>
+          <View style={s.tagsGrid}>
             {INTERESTS.map((tag) => (
               <TouchableOpacity
                 key={tag}
-                style={[styles.tag, interests.includes(tag) && styles.tagSelected]}
+                style={[s.tag, interests.includes(tag) && s.tagOn]}
                 onPress={() => toggleInterest(tag)}
               >
-                <Text style={[styles.tagText, interests.includes(tag) && styles.tagTextSelected]}>{tag}</Text>
+                <Text style={[s.tagText, interests.includes(tag) && s.tagTextOn]}>{tag}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -126,43 +145,36 @@ export default function EditProfileScreen({ navigation }) {
       </ScrollView>
 
       <AvatarPicker
-        visible={avatarPickerOpen}
-        onClose={() => setAvatarPickerOpen(false)}
-        onSelect={(uri) => {
-          setAvatarUri(uri);
-          setAvatarPickerOpen(false);
-        }}
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(uri) => { setAvatarUri(uri); setPickerOpen(false); }}
       />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  title: { fontSize: 17, fontWeight: '700', color: '#111' },
-  saveBtn: { color: '#4FC3F7', fontSize: 16, fontWeight: '700' },
-  content: { padding: 20, gap: 20 },
-
-  avatarSection: { alignItems: 'center', paddingVertical: 8 },
-  avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 10 },
-  avatarFallback: { backgroundColor: '#4FC3F7', justifyContent: 'center', alignItems: 'center' },
-  avatarLetter: { fontSize: 36, color: '#fff', fontWeight: '700' },
-  changePhotoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  changePhotoText: { color: '#4FC3F7', fontWeight: '700', fontSize: 15 },
-  changePhotoHint: { fontSize: 12, color: '#aaa' },
-
-  field: { gap: 6 },
-  label: { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.5 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12, paddingHorizontal: 12 },
-  atSign: { fontSize: 16, color: '#aaa', marginRight: 4 },
-  input: { flex: 1, fontSize: 15, paddingVertical: 12, color: '#222', borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12, paddingHorizontal: 14 },
-  bioInput: { minHeight: 90, textAlignVertical: 'top', paddingTop: 12 },
-  charCount: { fontSize: 11, color: '#bbb', textAlign: 'right' },
-
-  tagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#f4f4f4', borderWidth: 1.5, borderColor: '#eee' },
-  tagSelected: { backgroundColor: '#4FC3F7', borderColor: '#4FC3F7' },
-  tagText: { fontSize: 13, color: '#555', fontWeight: '500' },
-  tagTextSelected: { color: '#fff', fontWeight: '700' },
+const s = StyleSheet.create({
+  container:    { flex: 1, backgroundColor: C.bg },
+  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border },
+  title:        { fontSize: 17, fontWeight: '700', color: C.white },
+  saveBtn:      { color: C.yellow, fontSize: 16, fontWeight: '700' },
+  content:      { padding: 20, gap: 20 },
+  avatarSection:{ alignItems: 'center', paddingVertical: 8 },
+  avatar:       { width: 96, height: 96, borderRadius: 48, marginBottom: 10 },
+  avatarFb:     { backgroundColor: C.purple, justifyContent: 'center', alignItems: 'center' },
+  avatarLetter: { fontSize: 34, color: '#fff', fontWeight: '700' },
+  changeRow:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  changeText:   { color: C.purple, fontWeight: '700', fontSize: 14 },
+  field:        { gap: 8 },
+  label:        { fontSize: 11, fontWeight: '700', color: C.sub, letterSpacing: 1 },
+  inputRow:     { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: C.border, paddingHorizontal: 12 },
+  at:           { fontSize: 16, color: C.sub, marginRight: 4 },
+  input:        { flex: 1, fontSize: 15, paddingVertical: 12, color: C.white, backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: C.border, paddingHorizontal: 14 },
+  bioInput:     { minHeight: 90, textAlignVertical: 'top', paddingTop: 12 },
+  charCount:    { fontSize: 11, color: C.sub, textAlign: 'right' },
+  tagsGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tag:          { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
+  tagOn:        { backgroundColor: C.purple, borderColor: C.purple },
+  tagText:      { fontSize: 13, color: C.sub, fontWeight: '500' },
+  tagTextOn:    { color: '#fff', fontWeight: '700' },
 });

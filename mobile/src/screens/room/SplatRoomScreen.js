@@ -12,6 +12,10 @@ import useRoomStore from '../../store/roomStore';
 import SlotTile from '../../components/SlotTile';
 import GiftOverlay from '../../components/GiftOverlay';
 import { C, SPLAT_GIFTS, getVoltageRank } from '../../theme';
+import {
+  joinAgoraChannel, leaveAgoraChannel, destroyAgora,
+  muteLocalAudio, muteLocalVideo,
+} from '../../services/agora';
 
 const TOTAL_SLOTS = 20;
 
@@ -23,11 +27,13 @@ export default function SplatRoomScreen({ route, navigation }) {
     showGift: showGiftOverlay, giftOverlay, leaveRoom,
   } = useRoomStore();
 
-  const [comment, setComment]   = useState('');
-  const [socket, setSocket]     = useState(null);
+  const [comment, setComment]     = useState('');
+  const [socket, setSocket]       = useState(null);
   const [showGifts, setShowGifts] = useState(false);
-  const [myRole, setMyRole]     = useState('viewer');
-  const commentsRef             = useRef(null);
+  const [myRole, setMyRole]       = useState('viewer');
+  const [micOn, setMicOn]         = useState(true);
+  const [camOn, setCamOn]         = useState(false);
+  const commentsRef               = useRef(null);
 
   useEffect(() => { initRoom(); return () => cleanup(); }, []);
 
@@ -51,6 +57,9 @@ export default function SplatRoomScreen({ route, navigation }) {
         sock.on('cam-blocked',  () => Alert.alert('Blocked', 'Enable your mic before turning on camera.'));
         sock.on('kicked',       () => { Alert.alert('Removed', 'You were removed from this room.'); navigation.goBack(); });
       }
+
+      // Join Agora channel for real audio/video
+      await joinAgoraChannel(room.id, user?.id, me?.role || 'viewer', room.mode);
     } catch (err) {
       console.error('Room init error:', err);
     }
@@ -62,8 +71,34 @@ export default function SplatRoomScreen({ route, navigation }) {
       ['room-state','user-joined','user-left','new-comment','gift-received','cam-blocked','kicked']
         .forEach((e) => socket.off(e));
     }
+    await leaveAgoraChannel();
+    destroyAgora();
     await api.post(`/rooms/${room.id}/leave`).catch(() => {});
     leaveRoom();
+  };
+
+  const toggleMic = () => {
+    const next = !micOn;
+    // If turning off mic while cam is on, turn cam off too (hardcoded rule)
+    if (!next && camOn) {
+      setCamOn(false);
+      muteLocalVideo(true);
+      socket?.emit('toggle-cam', { roomId: room.id, camOn: false });
+    }
+    setMicOn(next);
+    muteLocalAudio(!next);
+    socket?.emit('toggle-mic', { roomId: room.id, micOn: next });
+  };
+
+  const toggleCam = () => {
+    if (!micOn) {
+      Alert.alert('Blocked', 'Enable your mic before turning on camera.');
+      return;
+    }
+    const next = !camOn;
+    setCamOn(next);
+    muteLocalVideo(!next);
+    socket?.emit('toggle-cam', { roomId: room.id, camOn: next });
   };
 
   const sendComment = () => {
@@ -182,6 +217,24 @@ export default function SplatRoomScreen({ route, navigation }) {
 
         {/* Bottom bar */}
         <View style={s.bottomBar}>
+          {canSpeak && (
+            <>
+              <TouchableOpacity
+                style={[s.iconBtn, !micOn && { backgroundColor: C.live }]}
+                onPress={toggleMic}
+              >
+                <Ionicons name={micOn ? 'mic' : 'mic-off'} size={18} color="#fff" />
+              </TouchableOpacity>
+              {(room.mode === 'video' || room.mode === 'both') && (
+                <TouchableOpacity
+                  style={[s.iconBtn, camOn && { backgroundColor: C.purple }]}
+                  onPress={toggleCam}
+                >
+                  <Ionicons name={camOn ? 'videocam' : 'videocam-off'} size={18} color="#fff" />
+                </TouchableOpacity>
+              )}
+            </>
+          )}
           <TextInput
             style={s.commentInput}
             placeholder="Say something..."
