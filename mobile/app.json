@@ -39,7 +39,7 @@
         "cameraPermission": "Chatsplat needs camera access to take a profile photo."
       }],
       "expo-notifications"
-      
+     
     ]
   }
 }
