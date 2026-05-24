@@ -1,165 +1,140 @@
 ---
-name: hookify:writing-rules
-description: Use this skill when writing or generating hookify rule files (.local.md). Ensures correct frontmatter format, valid event types, and proper condition syntax.
+name: writing-rules
+description: Use this skill when creating or formatting hookify rule files to ensure they use the correct frontmatter schema and message body format. Examples: <example>Context: User wants to create a rule to prevent dangerous rm commands\nuser: "/hookify Don't use rm -rf"\nassistant: "I'll use the writing-rules skill to create a properly formatted rule file."\n<commentary>The hookify command calls this skill to ensure the generated rule file has valid frontmatter and a clear message.</commentary></example>
 ---
 
-# Writing Hookify Rules
+You are a hookify rule formatter. Your job is to produce correctly structured `.local.md` rule files for the hookify plugin.
 
-When creating a hookify rule file, follow this exact format:
+## Rule File Schema
 
-## File Naming
+Every rule file must start with YAML frontmatter between `---` delimiters, followed by a message body.
 
-Rules go in the project's `.claude/` directory (not the plugin directory):
+### Frontmatter Fields
 
-```
-.claude/hookify.{rule-name}.local.md
-```
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `name` | Yes | string | kebab-case identifier, e.g. `warn-dangerous-rm` |
+| `enabled` | Yes | boolean | `true` or `false` |
+| `event` | Yes | string | One of: `bash`, `file`, `stop`, `prompt`, `all` |
+| `action` | Yes | string | `warn` (show message, allow) or `block` (deny operation) |
+| `pattern` | No* | string | Regex pattern — simple shorthand for single-condition rules |
+| `conditions` | No* | list | Advanced multi-condition matching (overrides `pattern`) |
+| `tool_matcher` | No | string | Pipe-separated tool names, e.g. `Bash\|Edit`, or `*` for all |
 
-Use kebab-case for the rule name. Examples:
-- `.claude/hookify.warn-dangerous-rm.local.md`
-- `.claude/hookify.block-eval-usage.local.md`
-- `.claude/hookify.warn-console-log.local.md`
+*Either `pattern` or `conditions` must be present.
 
-## File Format
+### Event → Tool Mapping
 
-```markdown
----
-name: rule-name-here
-enabled: true
-event: bash
-action: warn
-pattern: regex-pattern-here
----
+| Event value | Matched tools |
+|-------------|---------------|
+| `bash` | `Bash` |
+| `file` | `Edit`, `Write`, `MultiEdit` |
+| `stop` | Stop event (no tool) |
+| `prompt` | UserPromptSubmit |
+| `all` | All of the above |
 
-Message shown to Claude when this rule triggers.
-Explain what was detected and suggest safer alternatives.
-```
+### Simple Pattern (shorthand)
 
-## Frontmatter Fields
+The `pattern` field is a regex string. The engine infers the matched field:
+- `bash` event → matches against `command`
+- `file` event → matches against file content (`new_string` / `content`)
+- other → matches against `content`
 
-| Field | Required | Values | Description |
-|-------|----------|--------|-------------|
-| `name` | yes | kebab-case string | Unique identifier for this rule |
-| `enabled` | yes | `true` or `false` | Whether the rule is active |
-| `event` | yes | `bash`, `file`, `stop`, `prompt`, `all` | Which hook event to match |
-| `action` | yes | `warn` or `block` | Whether to warn Claude or block the operation |
-| `pattern` | yes* | regex string | Simple regex pattern (*required unless using `conditions`) |
+### Advanced Conditions
 
-## Event Types
-
-- **`bash`** — matches Bash tool calls; `pattern` applies to the `command` field
-- **`file`** — matches Edit/Write/MultiEdit tool calls; `pattern` applies to `new_string`/content
-- **`stop`** — matches when Claude tries to end its turn; `pattern` applies to `reason`
-- **`prompt`** — matches incoming user prompts; `pattern` applies to `user_prompt`
-- **`all`** — matches all hook events
-
-## Actions
-
-- **`warn`** — sends a `systemMessage` to Claude but allows the operation to proceed
-- **`block`** — denies the operation (PreToolUse) or blocks stopping (Stop event)
-
-## Simple Pattern Examples
-
-**Bash rules:**
-```yaml
-event: bash
-pattern: rm\s+-rf
-```
+Use `conditions` for multi-field or multi-operator matching:
 
 ```yaml
-event: bash
-pattern: sudo\s+
+conditions:
+  - field: command
+    operator: regex_match
+    pattern: "rm\\s+-rf"
+  - field: file_path
+    operator: ends_with
+    pattern: ".env"
 ```
 
-**File rules:**
-```yaml
-event: file
-pattern: console\.log\(
-```
+**Available operators:** `regex_match`, `contains`, `equals`, `not_contains`, `starts_with`, `ends_with`
 
-```yaml
-event: file
-pattern: eval\(|new\s+Function\(
-```
+**Available fields:**
+- `command` — Bash command string
+- `file_path` — path being written/edited
+- `new_string` / `content` — new file content or edit replacement
+- `old_string` — text being replaced (Edit tool)
+- `reason` — stop reason (Stop event)
+- `user_prompt` — raw user message (UserPromptSubmit)
+- `transcript` — full session transcript path content
 
-## Message Body Guidelines
+## Message Body
 
-Write the message body (after the `---`) as a clear explanation for Claude:
+The text after the closing `---` is shown to Claude as a `systemMessage` when the rule triggers. Write it as clear, actionable guidance:
 
-1. **State what was detected** — be specific
-2. **Explain why it's a concern** — the risk or policy
-3. **Suggest alternatives** — what to do instead
-
-Example:
-```
-Dangerous `rm -rf` command detected.
-
-This command recursively deletes files without confirmation and cannot be undone.
-Before proceeding, verify the exact path and consider using `trash` or `rm -i` instead.
-If deletion is truly needed, confirm the path with the user first.
-```
+- State what was detected
+- Explain why it's problematic
+- Suggest a safe alternative
+- Keep it concise (2–5 sentences)
 
 ## Complete Examples
 
-### Warn on dangerous delete
+### Simple warn rule (bash)
 ```markdown
 ---
 name: warn-dangerous-rm
 enabled: true
 event: bash
 action: warn
-pattern: rm\s+-rf
+pattern: "rm\\s+-rf"
 ---
 
-Dangerous `rm -rf` detected. Verify the exact path before proceeding and confirm with the user if deleting anything outside /tmp.
+Dangerous recursive delete detected. Verify the target path is correct and intentional before proceeding. Consider using `trash` or moving files to a temp location first.
 ```
 
-### Block hardcoded secrets
+### Block rule (file)
 ```markdown
 ---
-name: block-hardcoded-secrets
+name: block-env-file-edit
 enabled: true
 event: file
 action: block
-pattern: (api_key|secret|password)\s*=\s*["'][^"']{8,}["']
+pattern: "\\.env$"
+tool_matcher: "Write|Edit"
 ---
 
-Potential hardcoded secret detected in file content.
-
-Never commit API keys, passwords, or secrets directly in source files.
-Use environment variables or a secrets manager instead.
+Attempting to write to a .env file. This risks overwriting secrets. Edit .env files manually or use a dedicated secrets manager.
 ```
 
-### Warn before stopping without summary
+### Advanced conditions rule
 ```markdown
 ---
-name: warn-stop-without-summary
+name: warn-console-log
 enabled: true
-event: stop
+event: file
 action: warn
-pattern: .*
----
-
-Before stopping, confirm you have:
-1. Summarized all changes made
-2. Listed any follow-up tasks for the user
-3. Noted any unresolved issues
-```
-
-## Advanced: Explicit Conditions
-
-For complex matching, use `conditions` instead of `pattern`:
-
-```markdown
----
-name: warn-chmod-777
-enabled: true
-event: bash
-action: warn
-tool_matcher: Bash
 conditions:
-  - field: command, operator: regex_match, pattern: chmod\s+777
+  - field: content
+    operator: regex_match
+    pattern: "console\\.log\\("
+  - field: file_path
+    operator: regex_match
+    pattern: "\\.(ts|tsx|js|jsx)$"
 ---
 
-Insecure file permissions (777) detected. Use more restrictive permissions like 755 or 644.
+console.log() detected in a JavaScript/TypeScript file. Use a proper logging library (e.g. `logger.debug()`) so logs can be controlled by environment and won't leak to production.
 ```
+
+## Naming Conventions
+
+- Prefix with `warn-` or `block-` to reflect the action
+- Use descriptive kebab-case: `warn-sudo-commands`, `block-hardcoded-secrets`
+- File name must match: `.claude/hookify.{name}.local.md`
+
+## Validation Checklist
+
+Before writing the file, verify:
+- [ ] `name` is kebab-case and matches the filename
+- [ ] `enabled` is unquoted boolean (`true` / `false`)
+- [ ] `event` is one of the valid values
+- [ ] `action` is `warn` or `block`
+- [ ] Either `pattern` or `conditions` is present (not both, unless intentional)
+- [ ] Regex special characters are double-escaped in YAML strings (`\\.` not `\.`)
+- [ ] Message body is present and explains what to do instead
