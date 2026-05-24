@@ -13,6 +13,8 @@ import OnboardingScreen from '../screens/auth/OnboardingScreen';
 
 import HomeScreen from '../screens/home/HomeScreen';
 import AudioRoomScreen from '../screens/room/AudioRoomScreen';
+import CreateRoomScreen from '../screens/room/CreateRoomScreen';
+import ScheduledRoomsScreen from '../screens/room/ScheduledRoomsScreen';
 
 import SwipeScreen from '../screens/swipe/SwipeScreen';
 import FeedScreen from '../screens/feed/FeedScreen';
@@ -68,6 +70,8 @@ function AppStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={HomeTabs} />
       <Stack.Screen name="AudioRoom" component={AudioRoomScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="CreateRoom" component={CreateRoomScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="ScheduledRooms" component={ScheduledRoomsScreen} />
       <Stack.Screen name="ChatRoom" component={ChatScreen} options={{ headerShown: false }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     </Stack.Navigator>

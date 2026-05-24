@@ -16,6 +16,7 @@ export default function HomeScreen({ navigation }) {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [upcomingCount, setUpcomingCount] = useState(0);
 
   const fetchRooms = async () => {
     try {
@@ -32,7 +33,14 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  useFocusEffect(useCallback(() => { fetchRooms(); }, [tab]));
+  const fetchUpcomingCount = async () => {
+    try {
+      const res = await api.get('/rooms/scheduled');
+      setUpcomingCount(res.data.length);
+    } catch {}
+  };
+
+  useFocusEffect(useCallback(() => { fetchRooms(); fetchUpcomingCount(); }, [tab]));
 
   const filtered = rooms.filter((r) =>
     !search || r.title.toLowerCase().includes(search.toLowerCase())
@@ -44,6 +52,14 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.logo}>LMK</Text>
         <View style={styles.headerRight}>
+          <TouchableOpacity onPress={() => navigation.navigate('ScheduledRooms')} style={styles.calendarBtn}>
+            <Ionicons name="calendar-outline" size={22} color="#4FC3F7" />
+            {upcomingCount > 0 && (
+              <View style={styles.calendarBadge}>
+                <Text style={styles.calendarBadgeText}>{upcomingCount > 9 ? '9+' : upcomingCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
             <Ionicons name="notifications-outline" size={24} color="#222" />
           </TouchableOpacity>
@@ -103,7 +119,7 @@ export default function HomeScreen({ navigation }) {
 
       {/* FAB */}
       <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateRoom')}>
-        <Ionicons name="add" size={28} color="#fff" />
+        <Ionicons name="mic" size={24} color="#fff" />
       </TouchableOpacity>
     </View>
   );
@@ -113,7 +129,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f7fa' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12, backgroundColor: '#fff' },
   logo: { fontSize: 26, fontWeight: '900', color: '#4FC3F7', letterSpacing: -1 },
-  headerRight: { flexDirection: 'row', gap: 16 },
+  headerRight: { flexDirection: 'row', gap: 16, alignItems: 'center' },
+  calendarBtn: { position: 'relative' },
+  calendarBadge: { position: 'absolute', top: -4, right: -6, backgroundColor: '#FF4757', borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
+  calendarBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
   searchWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginVertical: 10, borderRadius: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: '#eee' },
   searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 15, paddingVertical: 10, color: '#222' },

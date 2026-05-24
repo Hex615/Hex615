@@ -38,12 +38,23 @@ export default function RoomCard({ room, onPress }) {
       </View>
 
       <View style={styles.footer}>
-        <View style={styles.stat}>
-          <Ionicons name="headset-outline" size={14} color="#888" />
-          <Text style={styles.statText}>{room.participant_count || 0}</Text>
-        </View>
-        <View style={styles.liveDot} />
-        <Text style={styles.liveText}>LIVE</Text>
+        {room.is_scheduled ? (
+          <>
+            <Ionicons name="calendar-outline" size={14} color="#888" />
+            <Text style={styles.scheduledText}>
+              {new Date(room.scheduled_at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            </Text>
+          </>
+        ) : (
+          <>
+            <View style={styles.stat}>
+              <Ionicons name="headset-outline" size={14} color="#888" />
+              <Text style={styles.statText}>{room.participant_count || 0}</Text>
+            </View>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>LIVE</Text>
+          </>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -69,4 +80,5 @@ const styles = StyleSheet.create({
   statText: { fontSize: 12, color: '#888' },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF4757', marginLeft: 8 },
   liveText: { fontSize: 10, color: '#FF4757', fontWeight: '800', letterSpacing: 1 },
+  scheduledText: { fontSize: 12, color: '#888', marginLeft: 4 },
 });
