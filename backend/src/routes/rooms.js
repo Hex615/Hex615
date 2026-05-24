@@ -32,6 +32,28 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+router.get('/scheduled', auth, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT r.*, u.username as host_username, u.avatar_url as host_avatar,
+        COUNT(DISTINCT rv.id) as rsvp_count,
+        EXISTS(SELECT 1 FROM room_rsvps rv2 WHERE rv2.room_id = r.id AND rv2.user_id = $1) as has_rsvped
+       FROM rooms r
+       JOIN users u ON r.host_id = u.id
+       LEFT JOIN room_rsvps rv ON r.id = rv.room_id
+       WHERE r.is_scheduled = true AND r.is_live = false AND r.ended_at IS NULL AND r.scheduled_at > NOW()
+       GROUP BY r.id, u.username, u.avatar_url
+       ORDER BY r.scheduled_at ASC
+       LIMIT 50`,
+      [req.user.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 router.post('/', auth, async (req, res) => {
   const { title, category, description, is_scheduled, scheduled_at } = req.body;
   if (!title) return res.status(400).json({ error: 'Title required' });
@@ -136,6 +158,73 @@ router.post('/:id/end', auth, async (req, res) => {
     await db.query('UPDATE rooms SET is_live = false, ended_at = NOW() WHERE id = $1', [req.params.id]);
     res.json({ message: 'Room ended' });
   } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.post('/:id/rsvp', auth, async (req, res) => {
+  try {
+    const room = await db.query(
+      'SELECT id, is_scheduled, is_live FROM rooms WHERE id = $1',
+      [req.params.id]
+    );
+    if (!room.rows[0]) return res.status(404).json({ error: 'Room not found' });
+    if (!room.rows[0].is_scheduled || room.rows[0].is_live) {
+      return res.status(400).json({ error: 'Room is not a scheduled room' });
+    }
+    await db.query(
+      'INSERT INTO room_rsvps (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [req.params.id, req.user.userId]
+    );
+    res.json({ rsvped: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.delete('/:id/rsvp', auth, async (req, res) => {
+  try {
+    await db.query(
+      'DELETE FROM room_rsvps WHERE room_id = $1 AND user_id = $2',
+      [req.params.id, req.user.userId]
+    );
+    res.json({ rsvped: false });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.post('/:id/go-live', auth, async (req, res) => {
+  try {
+    const room = await db.query(
+      'SELECT host_id FROM rooms WHERE id = $1 AND is_scheduled = true AND is_live = false',
+      [req.params.id]
+    );
+    if (!room.rows[0]) return res.status(404).json({ error: 'Scheduled room not found' });
+    if (room.rows[0].host_id !== req.user.userId) return res.status(403).json({ error: 'Not host' });
+
+    await db.query(
+      'UPDATE rooms SET is_live = true, is_scheduled = false WHERE id = $1',
+      [req.params.id]
+    );
+    await db.query(
+      'INSERT INTO room_participants (room_id, user_id, role, mic_slot) VALUES ($1, $2, $3, $4) ON CONFLICT (room_id, user_id) DO UPDATE SET left_at = NULL, role = $3',
+      [req.params.id, req.user.userId, 'host', 1]
+    );
+
+    // Notify RSVPed users
+    const rsvps = await db.query('SELECT user_id FROM room_rsvps WHERE room_id = $1', [req.params.id]);
+    const roomData = await db.query('SELECT title FROM rooms WHERE id = $1', [req.params.id]);
+    if (rsvps.rows.length > 0 && roomData.rows[0]) {
+      const notifValues = rsvps.rows.map((r) => `('${r.user_id}', 'room_live', 'Room is live!', '${roomData.rows[0].title.replace(/'/g, "''")} just went live', '{"room_id":"${req.params.id}"}')`).join(',');
+      await db.query(`INSERT INTO notifications (user_id, type, title, body, data) VALUES ${notifValues}`).catch(() => {});
+    }
+
+    res.json({ message: 'Room is now live' });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });
