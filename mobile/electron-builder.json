@@ -1,0 +1,41 @@
+{
+  "appId": "com.chatsplat.app",
+  "productName": "Chatsplat",
+  "directories": {
+    "output": "dist-electron"
+  },
+  "files": [
+    "electron/**/*",
+    "dist/**/*",
+    "assets/icon.png"
+  ],
+  "extraMetadata": {
+    "main": "electron/main.js"
+  },
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "assets/icon.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Chatsplat",
+    "installerIcon": "assets/icon.png",
+    "uninstallerIcon": "assets/icon.png",
+    "license": null
+  },
+  "portable": {
+    "artifactName": "Chatsplat-portable.exe"
+  }
+}
