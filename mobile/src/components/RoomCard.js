@@ -1,72 +1,73 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { C } from '../theme';
 
-const CATEGORY_COLORS = {
-  Music: '#FF6B9D', Gaming: '#6C5CE7', Sports: '#00B894',
-  Tech: '#0984E3', Art: '#FDCB6E', Discussion: '#E17055',
-  default: '#4FC3F7',
-};
+const MODE_ICON = { audio: 'mic', video: 'videocam', both: 'radio' };
 
 export default function RoomCard({ room, onPress }) {
-  const catColor = CATEGORY_COLORS[room.category] || CATEGORY_COLORS.default;
+  const modeIcon = MODE_ICON[room.mode] || 'mic';
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
-      <View style={[styles.categoryBadge, { backgroundColor: catColor }]}>
-        <Text style={styles.categoryText}>{room.category || 'General'}</Text>
-      </View>
-
-      <Text style={styles.title} numberOfLines={2}>{room.title}</Text>
-
-      <View style={styles.hostRow}>
-        {room.host_avatar ? (
-          <Image source={{ uri: room.host_avatar }} style={styles.hostAvatar} />
-        ) : (
-          <View style={[styles.hostAvatar, styles.hostAvatarFallback]}>
-            <Text style={styles.hostAvatarLetter}>
-              {(room.host_username || '?')[0].toUpperCase()}
-            </Text>
-          </View>
-        )}
-        <Text style={styles.hostName}>@{room.host_username}</Text>
-        {room.host_is_followed && (
-          <View style={styles.followingPill}>
-            <Text style={styles.followingText}>Following</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.footer}>
-        <View style={styles.stat}>
-          <Ionicons name="headset-outline" size={14} color="#888" />
-          <Text style={styles.statText}>{room.participant_count || 0}</Text>
+    <TouchableOpacity style={s.card} onPress={onPress} activeOpacity={0.8}>
+      <View style={s.topRow}>
+        <View style={s.modePill}>
+          <Ionicons name={modeIcon} size={11} color={C.purple} />
+          <Text style={s.modeText}>{(room.mode || 'audio').toUpperCase()}</Text>
         </View>
-        <View style={styles.liveDot} />
-        <Text style={styles.liveText}>LIVE</Text>
+        {room.theme_name && (
+          <View style={s.themePill}>
+            <Text style={s.themeText}>{room.theme_emoji} {room.theme_name}</Text>
+          </View>
+        )}
+        <View style={s.livePill}>
+          <View style={s.liveDot} />
+          <Text style={s.liveText}>LIVE</Text>
+        </View>
+      </View>
+
+      <Text style={s.title} numberOfLines={2}>{room.title}</Text>
+
+      <View style={s.hostRow}>
+        {room.host_avatar
+          ? <Image source={{ uri: room.host_avatar }} style={s.avatar} />
+          : <View style={[s.avatar, s.avatarFb]}>
+              <Text style={s.avatarLetter}>{(room.host_username||'?')[0].toUpperCase()}</Text>
+            </View>
+        }
+        <Text style={s.hostName}>@{room.host_username}</Text>
+        {room.is_locked && <Ionicons name="lock-closed" size={13} color={C.sub} style={{ marginLeft: 6 }} />}
+      </View>
+
+      <View style={s.footer}>
+        <Ionicons name="people-outline" size={13} color={C.sub} />
+        <Text style={s.count}>{room.participant_count || 0}/20</Text>
+        {room.participant_count >= 20 && <Text style={s.fullTag}>FULL</Text>}
       </View>
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   card: {
-    backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, elevation: 3,
+    backgroundColor: C.surface, borderRadius: 16, padding: 14, marginBottom: 10,
+    borderWidth: 1, borderColor: C.border,
   },
-  categoryBadge: { alignSelf: 'flex-start', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 },
-  categoryText: { color: '#fff', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  title: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginBottom: 12, lineHeight: 22 },
-  hostRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  hostAvatar: { width: 28, height: 28, borderRadius: 14, marginRight: 8 },
-  hostAvatarFallback: { backgroundColor: '#4FC3F7', justifyContent: 'center', alignItems: 'center' },
-  hostAvatarLetter: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  hostName: { fontSize: 13, color: '#666', fontWeight: '500', flex: 1 },
-  followingPill: { backgroundColor: '#e8f4fd', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  followingText: { fontSize: 10, color: '#4FC3F7', fontWeight: '600' },
-  footer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  stat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statText: { fontSize: 12, color: '#888' },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF4757', marginLeft: 8 },
-  liveText: { fontSize: 10, color: '#FF4757', fontWeight: '800', letterSpacing: 1 },
+  topRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  modePill:   { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.purpleDim, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
+  modeText:   { fontSize: 9, color: C.purple, fontWeight: '800', letterSpacing: 0.5 },
+  themePill:  { backgroundColor: C.surface2, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
+  themeText:  { fontSize: 9, color: C.sub },
+  livePill:   { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' },
+  liveDot:    { width: 6, height: 6, borderRadius: 3, backgroundColor: C.live },
+  liveText:   { fontSize: 9, color: C.live, fontWeight: '800', letterSpacing: 1 },
+  title:      { fontSize: 15, fontWeight: '700', color: C.white, marginBottom: 10, lineHeight: 21 },
+  hostRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  avatar:     { width: 24, height: 24, borderRadius: 12, marginRight: 8 },
+  avatarFb:   { backgroundColor: C.purple, justifyContent: 'center', alignItems: 'center' },
+  avatarLetter:{ color: '#fff', fontSize: 10, fontWeight: '700' },
+  hostName:   { fontSize: 12, color: C.sub, flex: 1 },
+  footer:     { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  count:      { fontSize: 12, color: C.sub },
+  fullTag:    { marginLeft: 6, fontSize: 9, color: C.yellow, fontWeight: '800', letterSpacing: 0.5 },
 });
