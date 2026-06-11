@@ -130,6 +130,13 @@ async function createWindow() {
     return { action: 'deny' };
   });
 
+  // Grant microphone/camera permission requests so the Agora Web SDK can capture
+  // audio (and video) in the Electron renderer. This is a local desktop app
+  // loading our own bundle, so auto-approving media permissions is safe here.
+  mainWindow.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => {
+    callback(true);
+  });
+
   // Surface renderer console + load failures to the main process stdout so
   // problems are visible without the GUI devtools.
   mainWindow.webContents.on('console-message', (...args) => {

@@ -18,6 +18,10 @@ dist-electron/
 *.key
 *.mobileprovision
 
+# Env (keep .env.example tracked)
+.env
+.env.local
+
 # Misc
 .DS_Store
 *.log

@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+
+# Env (keep .env.example tracked)
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.*
+yarn-error.*

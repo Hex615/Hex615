@@ -16,9 +16,12 @@ export async function initAgora() {
 export async function joinAgoraChannel(roomId, userId, role, mode) {
   const eng = await initAgora();
 
-  // Fetch token from backend
-  const res = await api.get(`/rooms/${roomId}/agora-token`);
-  const { token, uid, channel } = res.data;
+  // Fetch token from backend. The endpoint is POST and returns { token, appId };
+  // the channel is the room id and the token is built for uid 0 (any uid).
+  const res = await api.post(`/rooms/${roomId}/agora-token`);
+  const { token } = res.data || {};
+  const channel = roomId;
+  const uid = 0;
 
   const isPublisher = ['owner', 'manager', 'speaker'].includes(role);
   eng.setClientRole(isPublisher
@@ -30,7 +33,7 @@ export async function joinAgoraChannel(roomId, userId, role, mode) {
   eng.enableAudio();
   if (mode === 'video' || mode === 'both') eng.enableVideo();
 
-  await eng.joinChannel(token, channel, uid, {});
+  await eng.joinChannel(token || null, channel, uid, {});
   return { eng, uid };
 }
 
