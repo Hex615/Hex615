@@ -15,7 +15,9 @@ import { C, SPLAT_GIFTS, getVoltageRank } from '../../theme';
 import {
   joinAgoraChannel, leaveAgoraChannel, destroyAgora,
   muteLocalAudio, muteLocalVideo,
+  addRemoteVideoListener, getRemoteVideoUids,
 } from '../../services/agora';
+import { uidForUser } from '../../services/agoraUid';
 
 const TOTAL_SLOTS = 20;
 
@@ -33,9 +35,16 @@ export default function SplatRoomScreen({ route, navigation }) {
   const [myRole, setMyRole]       = useState('viewer');
   const [micOn, setMicOn]         = useState(true);
   const [camOn, setCamOn]         = useState(false);
+  const [videoUids, setVideoUids] = useState([]); // remote uids currently sending video
   const commentsRef               = useRef(null);
 
   useEffect(() => { initRoom(); return () => cleanup(); }, []);
+
+  // Re-render slots as remote participants start/stop their cameras.
+  useEffect(() => {
+    setVideoUids(getRemoteVideoUids());
+    return addRemoteVideoListener(setVideoUids);
+  }, []);
 
   const initRoom = async () => {
     try {
@@ -159,14 +168,26 @@ export default function SplatRoomScreen({ route, navigation }) {
 
       {/* 20-slot 4×5 grid */}
       <View style={s.grid}>
-        {slots.map((p, i) => (
-          <SlotTile
-            key={i}
-            participant={p}
-            slotNum={i + 1}
-            isSpeaking={false}
-          />
-        ))}
+        {slots.map((p, i) => {
+          const isLocal = !!p && p.user_id === user?.id;
+          const uid = p ? uidForUser(p.user_id) : undefined;
+          // Local: show our own preview while our camera is on. Remote: show
+          // video once Agora reports a stream for that participant's uid.
+          const showVideo = isLocal
+            ? camOn && (room.mode === 'video' || room.mode === 'both')
+            : !!p && videoUids.includes(uid);
+          return (
+            <SlotTile
+              key={i}
+              participant={p}
+              slotNum={i + 1}
+              isSpeaking={false}
+              showVideo={showVideo}
+              isLocal={isLocal}
+              uid={uid}
+            />
+          );
+        })}
       </View>
 
       {/* Comments + bottom */}

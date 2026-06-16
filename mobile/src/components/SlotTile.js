@@ -2,8 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from '../theme';
+import SlotVideo from './SlotVideo';
 
-export default function SlotTile({ participant, slotNum, onPress, isSpeaking }) {
+export default function SlotTile({ participant, slotNum, onPress, isSpeaking, showVideo, isLocal, uid }) {
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -35,11 +36,13 @@ export default function SlotTile({ participant, slotNum, onPress, isSpeaking }) 
     <View style={s.slot}>
       <Animated.View style={[s.avatarWrap, { transform: [{ scale: pulse }] }]}>
         {isSpeaking && <View style={s.ring} />}
-        {participant.avatar_url
-          ? <Image source={{ uri: participant.avatar_url }} style={s.avatar} />
-          : <View style={[s.avatar, s.avatarFallback]}>
-              <Text style={s.initial}>{initial}</Text>
-            </View>
+        {showVideo
+          ? <SlotVideo uid={uid} local={isLocal} style={s.avatar} />
+          : participant.avatar_url
+            ? <Image source={{ uri: participant.avatar_url }} style={s.avatar} />
+            : <View style={[s.avatar, s.avatarFallback]}>
+                <Text style={s.initial}>{initial}</Text>
+              </View>
         }
         {participant.mic_on === false && (
           <View style={s.muteBadge}>
