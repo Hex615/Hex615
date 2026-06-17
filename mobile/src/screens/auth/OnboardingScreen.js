@@ -4,53 +4,47 @@ import {
   ScrollView, Image, ActivityIndicator, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import AvatarPicker from '../../components/AvatarPicker';
+import { C } from '../../theme';
 
 const INTERESTS = [
-  'Music', 'Gaming', 'Sports', 'Art', 'Tech', 'Fashion',
-  'Food', 'Travel', 'Fitness', 'Movies', 'Books', 'Comedy',
-  'Politics', 'Anime', 'Dance', 'Spirituality',
+  'Music','Gaming','Sports','Art','Tech','Fashion',
+  'Food','Travel','Fitness','Movies','Books','Comedy',
+  'Politics','Anime','Dance','Spirituality',
 ];
 
 export default function OnboardingScreen() {
-  const [step, setStep] = useState(0); // 0=avatar, 1=username/bio, 2=interests
-  const [avatarUri, setAvatarUri] = useState(null);
-  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [step, setStep]         = useState(0);
+  const [avatarUri, setAvatar]  = useState(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [username, setUsername] = useState('');
-  const [bio, setBio] = useState('');
-  const [age, setAge] = useState('');
-  const [selected, setSelected] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [bio, setBio]           = useState('');
+  const [age, setAge]           = useState('');
+  const [interests, setInterests] = useState([]);
+  const [loading, setLoading]   = useState(false);
   const updateUser = useAuthStore((s) => s.updateUser);
 
-  const toggleInterest = (tag) => {
-    setSelected((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : prev.length < 8 ? [...prev, tag] : prev
+  const toggleInterest = (tag) =>
+    setInterests((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag)
+        : prev.length < 8 ? [...prev, tag] : prev
     );
-  };
-
-  const uploadAvatar = async (localUri) => {
-    // Upload to backend as multipart or send URL directly
-    // For demo: just return the local URI as the avatar_url
-    // In production: upload to Cloudinary, get back a URL
-    return localUri;
-  };
 
   const handleFinish = async () => {
-    if (!username.trim()) return Alert.alert('', 'Please choose a username');
+    if (!username.trim()) return Alert.alert('', 'Choose a username to continue');
+    const ageNum = parseInt(age);
+    if (age && (isNaN(ageNum) || ageNum < 18)) return Alert.alert('', 'You must be 18+ to use Chatsplat');
     setLoading(true);
     try {
-      let avatar_url = null;
-      if (avatarUri) avatar_url = await uploadAvatar(avatarUri);
-
       const res = await api.put('/users/me', {
         username: username.trim().toLowerCase().replace(/\s/g, '_'),
-        bio: bio.trim(),
-        age: age ? parseInt(age) : null,
-        interests: selected,
-        avatar_url,
+        bio: bio.trim() || null,
+        age: age ? ageNum : null,
+        interests,
+        avatar_url: avatarUri,
       });
       updateUser(res.data);
     } catch (err) {
@@ -60,57 +54,59 @@ export default function OnboardingScreen() {
     }
   };
 
+  const STEPS = ['Photo', 'Profile', 'Vibes'];
+  const canNext1 = username.trim().length >= 3;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={s.container} edges={['top']}>
+      {/* Step indicators */}
+      <View style={s.steps}>
+        {STEPS.map((label, i) => (
+          <View key={label} style={s.stepWrap}>
+            <View style={[s.dot, i <= step && s.dotActive]}>
+              <Text style={[s.dotText, i <= step && s.dotTextActive]}>{i + 1}</Text>
+            </View>
+            <Text style={[s.stepLabel, i === step && s.stepLabelActive]}>{label}</Text>
+          </View>
+        ))}
+      </View>
+
       {/* Step 0 — Avatar */}
       {step === 0 && (
-        <ScrollView contentContainerStyle={styles.center}>
-          <Text style={styles.stepTitle}>Choose your profile photo</Text>
-          <Text style={styles.stepSub}>Pick something that shows your vibe ✨</Text>
+        <ScrollView contentContainerStyle={s.center}>
+          <Text style={s.heading}>Choose your photo</Text>
+          <Text style={s.sub}>Pick something that shows your vibe</Text>
 
-          <TouchableOpacity onPress={() => setAvatarPickerOpen(true)} style={styles.avatarWrap}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="camera" size={40} color="#4FC3F7" />
-                <Text style={styles.avatarPlaceholderText}>Tap to add photo</Text>
-              </View>
-            )}
-            <View style={styles.avatarBadge}>
-              <Ionicons name="add" size={18} color="#fff" />
-            </View>
+          <TouchableOpacity onPress={() => setPickerOpen(true)} style={s.avatarWrap}>
+            {avatarUri
+              ? <Image source={{ uri: avatarUri }} style={s.avatar} />
+              : <View style={s.avatarEmpty}>
+                  <Ionicons name="camera" size={36} color={C.purple} />
+                  <Text style={s.avatarEmptyText}>Tap to add photo</Text>
+                </View>
+            }
+            <View style={s.editBadge}><Ionicons name="add" size={16} color="#fff" /></View>
           </TouchableOpacity>
 
-          <View style={styles.optionRow}>
-            <TouchableOpacity style={styles.optionBtn} onPress={() => setAvatarPickerOpen(true)}>
-              <Ionicons name="images-outline" size={20} color="#4FC3F7" />
-              <Text style={styles.optionBtnText}>Aesthetic Picks</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.optionBtn} onPress={() => setAvatarPickerOpen(true)}>
-              <Ionicons name="phone-portrait-outline" size={20} color="#4FC3F7" />
-              <Text style={styles.optionBtnText}>From Device</Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity style={styles.nextBtn} onPress={() => setStep(1)}>
-            <Text style={styles.nextBtnText}>{avatarUri ? 'Next →' : 'Skip for now'}</Text>
+          <TouchableOpacity style={s.primaryBtn} onPress={() => setStep(1)}>
+            <Text style={s.primaryBtnText}>{avatarUri ? 'Looks good →' : 'Skip for now'}</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
 
       {/* Step 1 — Username & Bio */}
       {step === 1 && (
-        <ScrollView contentContainerStyle={styles.center}>
-          <Text style={styles.stepTitle}>What should we call you?</Text>
+        <ScrollView contentContainerStyle={s.center}>
+          <Text style={s.heading}>What's your name?</Text>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Username</Text>
-            <View style={styles.inputWrap}>
-              <Text style={styles.atSign}>@</Text>
+          <View style={s.field}>
+            <Text style={s.label}>USERNAME</Text>
+            <View style={s.inputRow}>
+              <Text style={s.at}>@</Text>
               <TextInput
-                style={styles.input}
+                style={s.input}
                 placeholder="coolname"
+                placeholderTextColor={C.sub}
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -119,24 +115,26 @@ export default function OnboardingScreen() {
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Bio</Text>
+          <View style={s.field}>
+            <Text style={s.label}>BIO</Text>
             <TextInput
-              style={[styles.input, styles.inputBio]}
+              style={[s.input, s.bioInput]}
               placeholder="Tell people who you are..."
+              placeholderTextColor={C.sub}
               value={bio}
               onChangeText={setBio}
               multiline
               maxLength={160}
             />
-            <Text style={styles.charCount}>{bio.length}/160</Text>
+            <Text style={s.charCount}>{bio.length}/160</Text>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Age</Text>
+          <View style={s.field}>
+            <Text style={s.label}>AGE (must be 18+)</Text>
             <TextInput
-              style={styles.input}
+              style={s.input}
               placeholder="18"
+              placeholderTextColor={C.sub}
               value={age}
               onChangeText={setAge}
               keyboardType="number-pad"
@@ -144,103 +142,92 @@ export default function OnboardingScreen() {
             />
           </View>
 
-          <TouchableOpacity style={styles.nextBtn} onPress={() => setStep(2)}>
-            <Text style={styles.nextBtnText}>Next →</Text>
+          <TouchableOpacity style={[s.primaryBtn, !canNext1 && s.btnDim]} onPress={() => canNext1 && setStep(2)} disabled={!canNext1}>
+            <Text style={s.primaryBtnText}>Next →</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
 
       {/* Step 2 — Interests */}
       {step === 2 && (
-        <View style={styles.flex1}>
-          <View style={styles.center}>
-            <Text style={styles.stepTitle}>What are you into?</Text>
-            <Text style={styles.stepSub}>Pick up to 8 interests</Text>
-          </View>
+        <View style={s.flex1}>
+          <Text style={[s.heading, { paddingHorizontal: 24 }]}>What are you into?</Text>
+          <Text style={[s.sub, { paddingHorizontal: 24, marginBottom: 20 }]}>Pick up to 8 — {interests.length}/8</Text>
 
-          <View style={styles.tagsGrid}>
+          <ScrollView contentContainerStyle={s.tagsWrap}>
             {INTERESTS.map((tag) => (
               <TouchableOpacity
                 key={tag}
-                style={[styles.tag, selected.includes(tag) && styles.tagSelected]}
+                style={[s.tag, interests.includes(tag) && s.tagOn]}
                 onPress={() => toggleInterest(tag)}
               >
-                <Text style={[styles.tagText, selected.includes(tag) && styles.tagTextSelected]}>
-                  {tag}
-                </Text>
+                <Text style={[s.tagText, interests.includes(tag) && s.tagTextOn]}>{tag}</Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
 
-          <TouchableOpacity
-            style={[styles.nextBtn, styles.finishBtn, loading && { opacity: 0.6 }]}
-            onPress={handleFinish}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.nextBtnText}>Let's go! 🎉</Text>}
-          </TouchableOpacity>
+          <View style={s.finishWrap}>
+            <TouchableOpacity
+              style={[s.primaryBtn, loading && s.btnDim]}
+              onPress={handleFinish}
+              disabled={loading}
+            >
+              {loading
+                ? <ActivityIndicator color="#000" />
+                : <Text style={s.primaryBtnText}>Let's go! ⚡</Text>
+              }
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
       <AvatarPicker
-        visible={avatarPickerOpen}
-        onClose={() => setAvatarPickerOpen(false)}
-        onSelect={(uri) => {
-          setAvatarUri(uri);
-          setAvatarPickerOpen(false);
-        }}
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(uri) => { setAvatar(uri); setPickerOpen(false); }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  flex1: { flex: 1, padding: 24, paddingTop: 60 },
-  center: { flexGrow: 1, alignItems: 'center', padding: 24, paddingTop: 80 },
-  stepTitle: { fontSize: 26, fontWeight: '800', color: '#111', textAlign: 'center', marginBottom: 8 },
-  stepSub: { fontSize: 14, color: '#888', textAlign: 'center', marginBottom: 40 },
+const s = StyleSheet.create({
+  container:      { flex: 1, backgroundColor: C.bg },
+  flex1:          { flex: 1 },
+  steps:          { flexDirection: 'row', justifyContent: 'center', gap: 24, paddingVertical: 16 },
+  stepWrap:       { alignItems: 'center', gap: 4 },
+  dot:            { width: 28, height: 28, borderRadius: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, justifyContent: 'center', alignItems: 'center' },
+  dotActive:      { backgroundColor: C.purple, borderColor: C.purple },
+  dotText:        { fontSize: 12, color: C.sub, fontWeight: '700' },
+  dotTextActive:  { color: '#fff' },
+  stepLabel:      { fontSize: 10, color: C.sub },
+  stepLabelActive:{ color: C.purple, fontWeight: '700' },
 
-  avatarWrap: { position: 'relative', marginBottom: 32 },
-  avatar: { width: 130, height: 130, borderRadius: 65, borderWidth: 3, borderColor: '#4FC3F7' },
-  avatarPlaceholder: {
-    width: 130, height: 130, borderRadius: 65,
-    backgroundColor: '#f0faff', borderWidth: 2, borderStyle: 'dashed', borderColor: '#4FC3F7',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  avatarPlaceholderText: { color: '#4FC3F7', fontSize: 12, marginTop: 4 },
-  avatarBadge: {
-    position: 'absolute', bottom: 4, right: 4,
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#4FC3F7',
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: '#fff',
-  },
+  center:         { flexGrow: 1, alignItems: 'center', padding: 24, paddingTop: 32 },
+  heading:        { fontSize: 26, fontWeight: '800', color: C.white, marginBottom: 8 },
+  sub:            { fontSize: 14, color: C.sub, marginBottom: 36 },
 
-  optionRow: { flexDirection: 'row', gap: 12, marginBottom: 40, width: '100%' },
-  optionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, padding: 14, borderRadius: 14, backgroundColor: '#f0faff',
-    borderWidth: 1, borderColor: '#d0eefb',
-  },
-  optionBtnText: { color: '#4FC3F7', fontWeight: '600', fontSize: 13 },
+  avatarWrap:     { position: 'relative', marginBottom: 32 },
+  avatar:         { width: 130, height: 130, borderRadius: 65, borderWidth: 2, borderColor: C.purple },
+  avatarEmpty:    { width: 130, height: 130, borderRadius: 65, backgroundColor: C.purpleDim, borderWidth: 2, borderStyle: 'dashed', borderColor: C.purple, justifyContent: 'center', alignItems: 'center' },
+  avatarEmptyText:{ color: C.purple, fontSize: 11, marginTop: 6 },
+  editBadge:      { position: 'absolute', bottom: 4, right: 4, width: 30, height: 30, borderRadius: 15, backgroundColor: C.purple, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: C.bg },
 
-  inputGroup: { width: '100%', marginBottom: 20 },
-  inputLabel: { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12, paddingHorizontal: 12 },
-  atSign: { fontSize: 16, color: '#aaa', marginRight: 4 },
-  input: { flex: 1, fontSize: 16, paddingVertical: 12, color: '#222', borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12, paddingHorizontal: 14 },
-  inputBio: { minHeight: 90, textAlignVertical: 'top', paddingTop: 12 },
-  charCount: { textAlign: 'right', fontSize: 11, color: '#bbb', marginTop: 4 },
+  field:    { width: '100%', marginBottom: 16 },
+  label:    { fontSize: 11, fontWeight: '700', color: C.sub, letterSpacing: 1, marginBottom: 6 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: C.border, paddingHorizontal: 12 },
+  at:       { fontSize: 16, color: C.sub, marginRight: 4 },
+  input:    { flex: 1, fontSize: 15, paddingVertical: 13, color: C.white, backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: C.border, paddingHorizontal: 14 },
+  bioInput: { minHeight: 90, textAlignVertical: 'top', paddingTop: 12 },
+  charCount:{ fontSize: 11, color: C.sub, textAlign: 'right', marginTop: 4 },
 
-  nextBtn: { backgroundColor: '#4FC3F7', paddingVertical: 16, paddingHorizontal: 40, borderRadius: 30, marginTop: 8 },
-  finishBtn: { marginHorizontal: 0, borderRadius: 14, width: '100%', alignItems: 'center' },
-  nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  primaryBtn:     { backgroundColor: C.yellow, paddingVertical: 16, paddingHorizontal: 48, borderRadius: 30, marginTop: 16 },
+  btnDim:         { opacity: 0.4 },
+  primaryBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
 
-  tagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 32 },
-  tag: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 24, backgroundColor: '#f4f4f4', borderWidth: 1.5, borderColor: '#eee' },
-  tagSelected: { backgroundColor: '#4FC3F7', borderColor: '#4FC3F7' },
-  tagText: { fontSize: 14, color: '#555', fontWeight: '500' },
-  tagTextSelected: { color: '#fff', fontWeight: '700' },
+  tagsWrap:   { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 24, paddingBottom: 24 },
+  tag:        { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 24, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
+  tagOn:      { backgroundColor: C.purple, borderColor: C.purple },
+  tagText:    { fontSize: 14, color: C.sub, fontWeight: '500' },
+  tagTextOn:  { color: '#fff', fontWeight: '700' },
+  finishWrap: { padding: 20, paddingBottom: 32 },
 });

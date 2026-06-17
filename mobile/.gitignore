@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# Electron build output
+dist-electron/
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Env (keep .env.example tracked)
+.env
+.env.local
+
+# Misc
+.DS_Store
+*.log
+npm-debug.*
+yarn-error.*
